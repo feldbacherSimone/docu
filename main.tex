@@ -1,0 +1,63 @@
+%% A simple template for a lab or course report using the Hagenberg setup
+%% based on the standard LaTeX 'report' class
+
+%%% Magic comments for setting the correct parameters in compatible IDEs
+% !TeX encoding = utf8
+% !TeX program = pdflatex 
+% !TeX spellcheck = en_US
+% !BIB program = biber
+
+\RequirePackage[utf8]{inputenc} % Remove when using lualatex or xelatex!
+\RequirePackage{hgbpdfa}				% Remove if NO PDF/A output is desired
+
+\documentclass[english,notitlepage,smartquotes]{hgbreport}
+% Supported options in [..]:
+%    Main language: 'german' (default), 'english'
+%    Conversion to typographic quotation marks: 'smartquotes'
+%    Use APA citation style: 'apa'
+%    Do not create a separate title page: 'notitlepage'
+%    Page layout: 'oneside' (single-sided, default), 'twoside' (double-sided)
+%%%-----------------------------------------------------------------------------
+
+\renewcommand{\chaptername}{Lab}
+
+\graphicspath{{images/}}     % Location of images and graphics
+\bibliography{hgbreferences}    % Biblatex bibliography file (hgbreferences.bib)
+\ExecuteBibliographyOptions{backref=false} % No back references in bibliography
+
+%%%-----------------------------------------------------------------------------
+	% <----- set to assignment number!
+%%%-----------------------------------------------------------------------------
+\begin{document}
+%%%-----------------------------------------------------------------------------
+
+\author{Simone B.\ Feldbacher}                      % Your name
+\title{DRS MC508 -- SS 2025\\ % Name of the course
+				Lab Report Exercises 1--8} % Title of the report
+\date{\today}
+
+%%%-----------------------------------------------------------------------------
+\maketitle
+%%%-----------------------------------------------------------------------------
+
+\begin{abstract}\noindent
+The Course Distributed Real Time Systems focuses on the principles and
+technologies for building distributed real-time systems. The course covers fundamental topics like worst-case execution time analysis, real-time communication, scheduling algorithms, resources, and comunication. These concepts are applied using QNX 8 on a raspberry Pi 4. 
+This report summarizes the 8 assignments completed during the course, highlighting the key concepts and techniques learned in each chapter. 
+
+\end{abstract}
+
+
+\tableofcontents
+\cleardoublepage
+%%%-----------------------------------------------------------------------------
+
+\include{chapters/Lab1}
+\include{chapters/Lab2}
+\include{chapters/Lab3}
+
+\printbibliography[heading=noheader]
+
+%%%-----------------------------------------------------------------------------
+\end{document}
+%%%-----------------------------------------------------------------------------

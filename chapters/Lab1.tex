@@ -1,0 +1,132 @@
+\chapter{Assignment 1 --- WCET}
+
+\section{Assignment}
+After learning about scheduling and worst-case execution time (WCET) analysis, the first assignment focuses on developing a simple real-time application and analyzing its scheduling behavior and WCET. A passenger protection system is a system that has strong requirements for real time and fault tolerance. The following tasks should be completed: 
+\begin{itemize}
+    \item Implement a simplified version of the Airbag Deployment Algorithm described in \cite{mahmudNewDecisionMaking1995}. Using either C or C++, Don't use floating point numbers or OO features. 
+    \item Analyze the WCET using IAR embedded workbench.
+    \item Use BoundT to analyze the WCET. compare both results.
+\end{itemize}
+
+\section{Implementation}
+The provided paper and lecture slides provide a starting point and outline how to implement the airbag deployment algorithm. 
+It works by consistently calculating the current change in velocity as well as the length of the acceleration graph. Based in these values the system enters a STANDBY state and fires the airbag if the right conditions are met. 
+Three thresholds are defined:  
+\begin{itemize}
+    \item $\Delta V_1$: The change in velocity must be greater than $\Delta V_1$ to enter the STANDBY state.
+    \item $\Delta V_2$: If change in velocity exceeds this value the airbag is fired immediately. $\Delta V_2$ must be greater than $\Delta V_1$.
+    \item $L$: The length of the acceleration graph must be greater than $L$ during standby state to fire the airbag.
+\end{itemize}
+
+Before implementation the algorithm was broken down into steps and states as follows: 
+
+\subsection{Initialization} Sliding windows are initialized as arrays of size $N$ and filled with zeros. The system starts in the \emph{NORMAL} state. Everything after this is executed in an endless loop. Rudimentary timing is implemented using \texttt{usleep(1000000 / SAMPLES\_PER\_SECOND)}.
+
+\begin{CCode}
+    // Initialize arrays for storing time samples
+    int t1[T_SIZE1] = {0}; // Array for first time series
+    int t2[T_SIZE2] = {0}; // Array for second time series
+
+    // Define thresholds for change in velocity
+    int deltaV1 = 20; // Threshold for entering standby state
+    int deltaV2 = 50; // Threshold for firing the airbag
+    int LThreshold = 300; // Threshold for length of acceleration graph
+
+    // Variables for current calculations
+    int deltaV = 0; // Current change in velocity
+    int L = 0; // Current length of acceleration graph
+
+    // Variable to hold the current sample index
+    int currentSample;
+
+    // State of the airbag system
+    AirbagState state = NORMAL; // Initial state is NORMAL
+\end{CCode}
+
+\subsection{Data Acquisition} Query new data, random values in this case, and update the sliding windows by shifting existing values and adding the new data. This step happens regardless of state. 
+
+\begin{CCode}
+    static void processSample(int t1[], int size1, int t2[], int size2, int *deltaV, int *L)
+    {
+    int currentSample = rand() % (10 + 1 + 30) - 30;
+    printf("Current Sample: %d\n", currentSample);
+
+    slideWindow(t1, size1, currentSample);
+    slideWindow(t2, size2, currentSample);
+
+    *deltaV = determineDeltaV(t1, size1);
+    *L = determineL(t2, size2);
+
+    printf("DeltaV: %d, L: %d\n", *deltaV, *L);
+}
+
+\end{CCode}
+
+\subsection{Calculation} Calculate $\Delta V$ and $L$ within the scope of the sliding windows, using the formulas presented in the paper. 
+
+\begin{CCode}
+    static int determineDeltaV(int window[], int size)
+    {
+    double deltaV = 0;
+
+    for (int i = 0; i < size; i++)
+    {
+        deltaV += window[i] * 1.0 / SAMPLES_PER_SECOND;
+    }
+    return round(deltaV);
+}
+
+static int determineL(int window[], int size)
+    {
+
+    double l = 0, dy = 0;
+    double dx = 1.0 / SAMPLES_PER_SECOND;
+    for (int i = 0; i < size - 1; i++)
+    {
+        dy = window[i + 1] - window[i];
+        l += sqrt(pow(dy, 2) + pow(dx, 2));
+    }
+    return (int)l;
+}
+\end{CCode}
+
+\subsection{State Transition} Possible states are \emph{NORMAL}, \emph{STANDBY} and \emph{FIRE}. If $\Delta V$ exceeds $\Delta V_1$ the system enters the standby state. If $\Delta V$ exceeds $\Delta V_2$ the system fires immediately. If the system is in STANDBY state and $L$ exceeds the threshold $L$, the system fires. If the system is in STANDBY state and $\Delta V$ drops below $\Delta V_1$ the system goes back to normal. For clarity these are implemented as switch cases.
+
+Possible transitions are: 
+\begin{itemize}
+\item NORMAL $\rightarrow$ STANDBY $\rightarrow$ NORMAL 
+\item NORMAL $\rightarrow$ STANDBY $\rightarrow$ FIRE
+\end{itemize}
+
+\begin{CCode}
+        case NORMAL:
+            processSample(t1, T_SIZE1, t2, T_SIZE2, &deltaV, &L);
+            if (abs(deltaV) > deltaV1)
+            {
+                state = STANDBY;
+            }
+            break;
+
+        case STANDBY:
+            processSample(t1, T_SIZE1, t2, T_SIZE2, &deltaV, &L);
+            if (abs(deltaV) > deltaV2 || L > LThreshold)
+            {
+                state = FIRE;
+            }
+            if (abs(deltaV) < deltaV1)
+            {
+                state = NORMAL;
+            }
+            break;
+
+        case FIRE:
+            exit(0);
+            break;
+
+\end{CCode}
+
+\subsection{Challenges} 
+While the algorithm was simple to implement, upon trying to run it in the provided version of IAR Embedded Workbench didn't compile due to unsupported libraries and C features used. Many rewrites were necessary to fix it. 
+
+\section{Evaluation}
+Describe tests and results.
