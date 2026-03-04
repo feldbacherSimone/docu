@@ -121,12 +121,52 @@ Possible transitions are:
 
         case FIRE:
             exit(0);
-            break;
+            break;  
 
 \end{CCode}
 
 \subsection{Challenges} 
-While the algorithm was simple to implement, upon trying to run it in the provided version of IAR Embedded Workbench didn't compile due to unsupported libraries and C features used. Many rewrites were necessary to fix it. 
+While the algorithm was simple to implement, trying to run it in the provided version of IAR Embedded Workbench caused some problems. Headers like time.h were not included per default and would have taken up too much space to compile in the free version. std:out was initially replaced with \texttt{printf} and later entirely omitted due to the same space concerns. Some rewrites were necessary to fix these problems.These problems were tackled as follows: 
+\begin{itemize}
+    \item unsupported headers: Removed time.h since only the WCET of the actual code execution matters for WCET, 
+    \item Error e89: Caused by exceeding the 4KB object code limit of the kick start version. Remove the studio.h header to save on object code. This also means removing all \texttt{printf} statements, which did not matter for the WCET analysis anyway.
+    \item Error e16: Occurred during building. Was fixed by selecting the \textit{ATmega328P} as the target processor. 
+\end{itemize}
+BoundT presented it's own set of challenges. It would, despite my best efforts, not compile on my machine so the pre-installed version in the proved VM was used instead. The 1024kb limit was no problem. The require .elf file was compiled from VS code using gcc, which failed due to missing STABS symbols. Using an older version of the compiler and including stabs finally lead to a usable result. 
+
+
 
 \section{Evaluation}
-Describe tests and results.
+After getting \textit{Wayland} and \textit{VMware Workstation} to stop fighting using the true and trust method of copying a fix from Reddit, all the analysis was done on the provided version of Windows XP. 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{IAR_02.png}
+    \caption{Profiling view from IAR Embedded Workbench Simulator. }
+    \label{fig:IAR01}
+\end{figure}
+
+\subsection {WCET analysis from the IAR Simulator Results}
+
+Debugging the code in IAR resulted in the following execution times for one loop after the initial setup (seen in \ref{fig:IAR01}) for the function implemented. \texttt{slideWindow} gets called twice per loop because the sliding windows are implemented as two separate arrays. The Accumulated Time for \texttt{main} shows that it takes 3998 cycles to execute one loop. At a clock speed of 16MHz this would take 0.25ms to execute, well under the 30ms requirement for the airbag system. Such a short time is expected because the sensor reading is not accounted for and the sliding windows are small with only a length of 20 and 30 respectively. Increasing both by 10 already increases the time to 5300 cycles or 0.33ms.
+
+
+
+\subsection{WCET results from BoundT} 
+After compiling the algorithm for the Atmega128 (the Atmega328P was not supported in BoundT) the analysis was run with the following parameters: 
+
+\begin{CCode}
+    boundt_avr -device=ATmega128 -elf_sym -max_steps 1024 -show times airbag_atmega128_stabs.elf main 
+\end{CCode}
+
+The resulting WCET in CPU cycles were: 
+\begin{itemize}
+    \item 2386 cycles for the \texttt{processSample} function, which coposes fetching the samples, sliding the windows and calculating $\Delta V$ and $L$.
+    \item 3144 cycles for the \texttt{main} function, which includes the state transitions and the calls to \texttt{processSample}. 
+\end{itemize}
+
+These results are lower than the ones obtained from the IAR Simulator. This difference could come from the fact that the code was compiled for a different processor, or that the compilation in VS code performed some optimizations that the IAR compiler did not. 
+
+\subsection{Discussion}
+
+For both results it is important to keep in mind that the WCET from this example is not realistic since the code does not include the time it takes to read the sensors, which is a crucial part of the airbag system. The results are only for the processing of a small set of sample data and the state transitions, to satisfy the goal of this assignment which was to get familiar with the tools and the process of WCET analysis.

@@ -1,1 +1,85 @@
 \chapter{Assignment 3 - WCET calculator}
+ \section{Assignment}
+ After learning about various scheduling policies and blocking tasks, the assignment for Lab 3 focuses on writing a short program that calculates worst case response time using \textit{Deadline Monotonic Scheduling}. 
+
+
+
+
+ \section{Implementation}
+The assignemnt was completed using C\#. Input data was read froma csv file using the \textit{csvHelper} library. The input includes \textit{Task ID}, \textit{Period}, \textit{Deadline}, \textit{Execution Time} and \textit{Priority} as shown in Table \ref{tab:input}. 
+
+\label{tab:input}
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Task} & \textbf{Period} & \textbf{Deadline} & \textbf{Execution Time} & \textbf{Priority} \\
+\hline
+1 & 250  & 10   & 5  & 1 \\
+2 & 10   & 10   & 2  & 2 \\
+3 & 330  & 50   & 25 & 3 \\
+4 & 1000 & 1000 & 29 & 4 \\
+\hline
+\end{tabular}
+\caption{Task Parameters}
+\end{table}
+
+The algorithm tasks the task list and TaskID to calculate the time for as input and uses the formula \ref{math:response_time} to calculate the worst case response time. The algorithm iteratively calculates the response time until it converges or exceeds the deadline.
+
+\label{math:response_time}
+\[
+  R^{n+1}_i = C_i + \sum_{K \in hp(i)} \left\lceil \frac{R^n_i}{T_K} \right\rceil C_K
+\]
+
+\begin{center}
+\begin{tabular}{l}
+\textbf{Algorithm: Worst-Case Response Time (WCET)} \\[4pt]
+\hline \\[-6pt]
+\textbf{Input:} Task set $\mathcal{T}$, task $\tau_k$ \\ 
+\textbf{Output:} Worst-case response time $R_k$ \\[6pt]
+
+1.\quad Select task $\tau_k \in \mathcal{T}$ \\
+
+2.\quad $\mathcal{HP} \leftarrow
+\{\tau_i \in \mathcal{T} \mid \text{priority}(\tau_i) >
+\text{priority}(\tau_k)\}$ \\[4pt]
+
+3.\quad $R_{\text{prev}} \leftarrow -1$ \\
+
+4.\quad $R \leftarrow 0$ \\[4pt]
+
+5.\quad \textbf{while} $R \neq R_{\text{prev}}$ \textbf{do} \\
+\quad 5.1\quad $R_{\text{prev}} \leftarrow R$ \\
+\quad 5.2\quad $R \leftarrow C_k$ \\
+\quad 5.3\quad \textbf{for each} $\tau_i \in \mathcal{HP}$ \textbf{do} \\
+\quad\quad $R \leftarrow R +
+\left\lceil \dfrac{R_{\text{prev}}}{T_i} \right\rceil C_i$ \\
+\quad 5.4\quad \textbf{end for} \\
+
+6.\quad \textbf{end while} \\[4pt]
+
+7.\quad \textbf{return} $R$ \\
+\end{tabular}
+\end{center}
+
+\section{Evaluation}
+To veryfiy the implementation, the same input data as shown in the slides was used. Calculating the response time for Task 3 returns 38ms which machtes the result shown on the slides. The response times for the other tasks are shown below: 
+
+\label{tab:results}
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Task} & \textbf{Response Time}\\
+\hline
+1 & 5  \\
+2 & 7 \\
+3 & 38 \\
+4 & 75 \\
+
+\hline
+\end{tabular}
+\caption{Resulting Response Times}
+\end{table}
+
+As expected the Response time is higher for tasks with a higher priority. 
