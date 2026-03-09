@@ -1,12 +1,52 @@
 \chapter{Assignment 2 --- Scheduling policies}
 
 \section{Assignment}
-The goal of assignemnt 2 is to work with 3 differnt scheduling policies and use \textit{Cheddar} to simulate the schudling. For the dierrent policies the following variables schould be determined: 
-\begin{itemize}
-    \item \textbf{Rate Monotonic (RM)}: 
-    \item \textbf{Round Robin (RR)}: 
-    \item \textbf{Cyclic Executive (CE)}:
-\end{itemize} fire 
-\section{Approach}
+After having determined the WCET for one of the tasks in the airbag system to be about 0.25ms or 250$\mu s$ in the last assignment, now we have to consider other tasks that get executed periodically in the system as well. From the lecture slides the following three additional tasks were selected: 
+\label{tab:tasks}
+\begin{table}[h]
+    \centering
+    \caption{Tasks with their periods and worst-case execution times}
+    \begin{tabular}{|c|p{6cm}|c|c|}
+        \hline
+        \textbf{Task} & \textbf{Description} & \textbf{Period} & \textbf{WCET} \\
+        \hline
+        $\tau_1$ & As determined in the last chapter. This task is responsible for the airbag deployment. & 1ms & 0.25ms \\
+        \hline
+        $\tau_2$ & Responsible for gathering data from an additional satellite accelerometer. & 1ms & 0.1ms \\
+        \hline
+        $\tau_3$ & Responsible for verifying the decision of the airbag system. & 1ms & 0.01ms \\
+        \hline
+        $\tau_4$ & Responsible for communicating with a Diagnostic interface. & 100ms & 5ms \\
+        \hline
+    \end{tabular}
+\end{table}
+The goal of assignment 2 is to work with three different scheduling policies and use \textit{Cheddar} to simulate the resulting schedules. For the different policies the following variables should be determined: 
 
+\begin{itemize}
+    \item \textbf{Rate Monotonic (RM)}: A priority based strategy that assumes all tasks are periodic with their deadline being this period. Tasks with shorter periods get higher priorities.
+    Perform tests in Cheddar to determine if the system is schedulable under this policy.
+    \item \textbf{Round Robin (RR)}: Fair policy that lets tasks execute until they give up control to the scheduler. Determine the necessary time quantum and how many context switches are necessary. Use Cheddar to simulate the resulting schedule. 
+    \item \textbf{Cyclic Executive (CE)}: Fair policy that runs all tasks to completion in the same order repeatedly. Determine the minor and major cycle and if a feasible schedule is possible. 
+\end{itemize}
+
+\section{Approach}
+The exercises were approached in order of complexity, starting with cyclic executive. 
+\subsection{Cyclic Executive}
+The greatest common divisor of the tasks from \ref{tab:tasks} is one 1ms, which determines the minor cycle. The major cycle, the least common multiple of the task periods is 100ms. 
+While $\tau_1, \tau_2$ and $\tau_3$, who get executed every minor cycle, are feasible to execute within one minor cycle since their execution times only add up to 0.36ms, $\tau_4$ cannot be executed within the minor cycle. It's execution time of 5ms alone is greater than one minor cycle, meaning that during it's exectuion the other tasks cannot meet their deadlinesTherefore, a feasible schedule is not possible under the cyclic executive policy.
+
+\subsection{Round Robin}
+Since $\tau_4$ takes so long to execute, it must be interreupted so the other tasks get the chance to meet their deadlines. The first three tasks need to be executed every 1ms, but they also need time to execute, so the quantum needs to be smaller than that. A quantum of 0.6 ms would interrupt $\tau_4$ with 0.4 ms left until the deadline of the first three tasks, which is enough for all three of them to execute. 
+To verify this, a simulation was run in Cheddar with the following parameters. 
+
+\label{fig:roundrobin}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{02_RoundRobin01.png}
+
+\includegraphics[width=0.7\textwidth]{02_RoundRobin02.png}
+\caption{Output from Cheddar for simulting Round Robin scheduling with the parameters from Table \ref{tab:tasks} and a quantum of 0.6ms. Numbers in the top image are in mycroseconds over the span of 100ms, or one period of task 4. Numbers in the bottom imgage are multiplied by 100 since cheddar doesnot allow for decimal inputs.}
+\end{figure}
+
+The simulation confirms that this schedule is feasible but also requires over 200 context switches per 100ms. The high number of contet switches is a consequence of the periods and execution time of the tasks va           rring so greatly. 
 \section{Evaluation}
