@@ -24,7 +24,7 @@ The goal of assignment 2 is to work with three different scheduling policies and
 
 \begin{itemize}
     \item \textbf{Rate Monotonic (RM)}: A priority based strategy that assumes all tasks are periodic with their deadline being this period. Tasks with shorter periods get higher priorities.
-    Perform tests in Cheddar to determine if the system is schedulable under this policy.
+    Perform tests in Cheddar to determine if the system is schedulable under this policy. Perform the Liu/Layland and hyperbolic tests. 
     \item \textbf{Round Robin (RR)}: Fair policy that lets tasks execute until they give up control to the scheduler. Determine the necessary time quantum and how many context switches are necessary. Use Cheddar to simulate the resulting schedule. 
     \item \textbf{Cyclic Executive (CE)}: Fair policy that runs all tasks to completion in the same order repeatedly. Determine the minor and major cycle and if a feasible schedule is possible. 
 \end{itemize}
@@ -33,11 +33,22 @@ The goal of assignment 2 is to work with three different scheduling policies and
 The exercises were approached in order of complexity, starting with cyclic executive. 
 \subsection{Cyclic Executive}
 The greatest common divisor of the tasks from \ref{tab:tasks} is one 1ms, which determines the minor cycle. The major cycle, the least common multiple of the task periods is 100ms. 
-While $\tau_1, \tau_2$ and $\tau_3$, who get executed every minor cycle, are feasible to execute within one minor cycle since their execution times only add up to 0.36ms, $\tau_4$ cannot be executed within the minor cycle. It's execution time of 5ms alone is greater than one minor cycle, meaning that during it's exectuion the other tasks cannot meet their deadlinesTherefore, a feasible schedule is not possible under the cyclic executive policy.
+While $\tau_1, \tau_2$ and $\tau_3$, who get executed every minor cycle, are feasible to execute within one minor cycle since their execution times only add up to 0.36ms, $\tau_4$ cannot be executed within the minor cycle. Its execution time of 5ms alone is greater than one minor cycle, meaning that during its execution the other tasks cannot meet their deadlines. Therefore, a feasible schedule is not possible under the cyclic executive policy.
 
 \subsection{Round Robin}
-Since $\tau_4$ takes so long to execute, it must be interreupted so the other tasks get the chance to meet their deadlines. The first three tasks need to be executed every 1ms, but they also need time to execute, so the quantum needs to be smaller than that. A quantum of 0.6 ms would interrupt $\tau_4$ with 0.4 ms left until the deadline of the first three tasks, which is enough for all three of them to execute. 
-To verify this, a simulation was run in Cheddar with the following parameters. 
+Since $\tau_4$ takes so long to execute, it must be interrupted so the other tasks get the chance to meet their deadlines. The first three tasks need to be executed every 1ms, but they also need time to execute, so the quantum needs to be smaller than that. A quantum of 0.6 ms would interrupt $\tau_4$ with 0.4 ms left until the deadline of the first three tasks, which is enough for all three of them to execute. 
+To verify this, a simulation was run in Cheddar with the following parameters \ref{fig:RRParams}. 
+
+\label{fig:RRParams}
+\begin{figure}[htbp]
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.48\textwidth]{02_RoundRobin_Core.png} &
+    \includegraphics[width=0.48\textwidth]{02_RoundRobin_Tasks.png}
+  \end{tabular}
+  \caption{Parameters for simulating Round Robin scheduling in Cheddar. The left image shows the core, the right image shows the tasks and their parameters.}
+  \label{fig:roundrobin}
+\end{figure}
 
 \label{fig:roundrobin}
 \begin{figure}[h]
@@ -45,8 +56,76 @@ To verify this, a simulation was run in Cheddar with the following parameters.
 \includegraphics[width=0.7\textwidth]{02_RoundRobin01.png}
 
 \includegraphics[width=0.7\textwidth]{02_RoundRobin02.png}
-\caption{Output from Cheddar for simulting Round Robin scheduling with the parameters from Table \ref{tab:tasks} and a quantum of 0.6ms. Numbers in the top image are in mycroseconds over the span of 100ms, or one period of task 4. Numbers in the bottom imgage are multiplied by 100 since cheddar doesnot allow for decimal inputs.}
+\caption{Output from Cheddar for simulating Round Robin scheduling with the parameters from Table \ref{tab:tasks} and a quantum of 0.6ms. Numbers in the top image are in microseconds over the span of 100ms, or one period of task 4. Numbers in the bottom image are multiplied by 100 since Cheddar does not allow for decimal inputs.}
 \end{figure}
 
-The simulation confirms that this schedule is feasible but also requires over 200 context switches per 100ms. The high number of contet switches is a consequence of the periods and execution time of the tasks va           rring so greatly. 
+The simulation confirms that this schedule is feasible but also requires over 200 context switches per 100ms. The high number of context switches is a consequence of the periods and execution time of the tasks varying so greatly. 
+
+\subsection{Rate Monotonic} 
+
+In Rate Monotonic scheduling, the tasks with the shortest period get the highest priority. In this case, $\tau_1, \tau_2$ and $\tau_3$ would have higher priority than $\tau_4$. 
+
+The schedulability condition by Liu and Layland is
+\[
+U=\sum_{i=1}^{n}\frac{C_i}{T_i}\le n\left(2^{1/n}-1\right),
+\]
+where \(C_i\) is the (worst-case) execution time of task \(i\), \(T_i\) is the period of task \(i\), and \(n\) is the total number of tasks.
+
+For the tasks from Table \ref{tab:tasks} the utilization \(U\) results in 
+\[U = 0.41 \leq 0,76\]
+which means that the system is schedulable under the Rate Monotonic policy.
+
+The hyperbolic bound test is given by this condition:
+\[
+U=\prod_{i=1}^{n}\left(\frac{c_i}{T_i}+1\right)\le 2
+\]
+which resolves to 
+\[U = 1.45 \leq 2\]
+meaning this test passes as well. 
+
+To run the simulation in Cheddar, only the schedule type parameter in the core needs to be changed in the setup from the Round Robin simulation. Custom task priorities did not affect the resulting schedule, which is expected since the priorities are determined by the periods of the tasks.
+Figure \ref{fig:RM} shows the simulation results. 
+
+\begin{figure}[htbp]
+
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.48\textwidth]{02_RateMonotonic_timeline.png} &
+    \includegraphics[width=0.48\textwidth]{02_RateMonotonic_result.png}
+  \end{tabular}
+  \caption{Rate Monotonic scheduling simulation in Cheddar showing the timeline (left) and simulation statistics (right).}
+  \label{fig:RM}
+\end{figure}
+
 \section{Evaluation}
+
+Table~\ref{tab:scheduling-comparison} shows the simulation results from Cheddar for both scheduling policies over a 100ms interval.
+Rate Monotonic scheduling surprisingly results in more context switches than Round Robin, yet it also decreases the WCET for the first three tasks significantly. This is because $\tau_4$ gets preempted more often, which allows the other tasks to execute sooner. The number of preemptions is similar for both policies, which is expected since $\tau_4$ needs to be preempted at least 7 times to allow the other tasks to execute.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Comparison of Round Robin and Rate Monotonic scheduling simulation results}
+    \label{tab:scheduling-comparison}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Metric} & \textbf{Round Robin} & \textbf{Rate Monotonic} \\
+        \hline
+        Context switches & 217 & 307 \\
+        \hline
+        Preemptions & 8 & 7 \\
+        \hline
+        $\tau_1$ response time (worst) & 960\,$\mu$s & 360\,$\mu$s \\
+        \hline
+        $\tau_2$ response time (worst) & 910\,$\mu$s & 110\,$\mu$s \\
+        \hline
+        $\tau_3$ response time (worst) & 920\,$\mu$s & 10\,$\mu$s \\
+        \hline
+        $\tau_4$ response time (worst) & 7880\,$\mu$s & 7880\,$\mu$s \\
+        \hline
+        Deadlines missed & 0 & 0 \\
+        \hline
+        Schedulable & Yes & Yes \\
+        \hline
+    \end{tabular}
+\end{table}
+
