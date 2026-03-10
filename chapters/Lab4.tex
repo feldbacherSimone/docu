@@ -1,1 +1,35 @@
 \chapter{Assignment 4 --- Real-time Application with QNX, Profiling}
+
+\section{Assignment}
+After covering RTOS and their components in detail in the lecture and learning how to schedule periodic tasks on QNX, this assignment focuses on getting started developing for QNX on the Raspberry Pi 4.
+After getting familiar with the hardware setup and remote debugging, the goal is to create 2 periodic tasks using the POSIX API and monitor their execution using the system profiler and an external logic analyzer.
+code for this implementation as well as those of the follwing tasks can be found in the GitHub repository for this course \footnote{\url{https://github.com/feldbacherSimone/Assignment_04}}.
+
+\section{Approach}
+\subsection{Setup and Hello World}
+The first step was to acquire the necessary education license for QNX 8.3 and set up the required extension for Visual Studio. The QNX image was flashed onto an SD card and run on the Raspberry Pi 4. To allow the device to be connected over ethernet the IP address of the Pi was statically assigned as 192.168.1.100, matching the configuration of the image, and configured in the IDE.
+With the setup complete the first "Hello World" application was created and successfully deployed to the Raspberry Pi.
+The setup and successful first execution are shown in Figure~\ref{fig:lab4-setup-hello}.
+\begin{figure}[htbp]
+	\centering
+	\begin{minipage}[t]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{images/04_QNXSetup.png}
+	\end{minipage}
+	\hfill
+	\begin{minipage}[t]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{images/04_HelloWorld.png}
+	\end{minipage}
+	\caption{QNX setup on Raspberry Pi 4 (left) and successful Hello QNX execution (right).}
+	\label{fig:lab4-setup-hello}
+\end{figure}
+
+\subsection{Task 1: Airbag System}
+
+
+\subsection{Task 2: CRC16 Checksumm}
+For encrytion tiny-AES \footnote{\url{https://github.com/kokke/tiny-AES-c/blob/master/aes.c}}was used.
+
+\subsection{Task 3:Diagnistics}
+\section{Results}
