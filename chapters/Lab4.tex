@@ -3,9 +3,29 @@
 \section{Assignment}
 After covering RTOS and their components in detail in the lecture and learning how to schedule periodic tasks on QNX, this assignment focuses on getting started developing for QNX on the Raspberry Pi 4.
 After getting familiar with the hardware setup and remote debugging, the goal is to create 2 periodic tasks using the POSIX API and monitor their execution using the system profiler and an external logic analyzer.
-code for this implementation as well as those of the follwing tasks can be found in the GitHub repository for this course \footnote{\url{https://github.com/feldbacherSimone/Assignment_04}}.
+code for this implementation as well as those of the following tasks can be found in the GitHub repository for this course \footnote{\url{https://github.com/feldbacherSimone/Assignment_04}}.
 
 \section{Approach}
+Since the assignment is focused on working with threads rather than the precise code inside of them, simplified or dummy algorithms were used for some of the tasks. 
+\texttt{clock\_nanosleep} was used to achieve the periodic execution of the tasks.
+\begin{CCode} 
+struct timespec next; 
+clock_gettime(CLOCK_MONOTONIC, &next);
+for(;;)
+{
+	// Sample Accelerometer Data
+
+	// Advance deadline by period
+
+	next.tv_nsec += 1000000; // 1 ms
+	if(next.tv_nsec >= 1000000000)
+	{
+		next.tv_sec += 1;
+		next.tv_nsec -= 1000000000;
+	}
+	clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+}
+\end{CCode}
 \subsection{Setup and Hello World}
 The first step was to acquire the necessary education license for QNX 8.3 and set up the required extension for Visual Studio. The QNX image was flashed onto an SD card and run on the Raspberry Pi 4. To allow the device to be connected over ethernet the IP address of the Pi was statically assigned as 192.168.1.100, matching the configuration of the image, and configured in the IDE.
 With the setup complete the first "Hello World" application was created and successfully deployed to the Raspberry Pi.
@@ -25,11 +45,42 @@ The setup and successful first execution are shown in Figure~\ref{fig:lab4-setup
 	\label{fig:lab4-setup-hello}
 \end{figure}
 
+
+\subsection{In class task - measurement with logic analyzer}
+During the lecture a simple task was set up to toggle one of the GPIO pins on the Raspberry Pi. Using a logic analyzer the timing of the toggling was measured and compared to the expected timing. The results are shown in Figure~\ref{fig:lab4-logic-analyzer}. Surprising was that even when using a tiny delay (few nanoseconds) the period would increase to almost 2ms. This was caused by the minimum timer resolution on the QNX image being 1ms. Any delay is rounded up to the next multiple of 1ms, which is why the period increased to almost 2ms.
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=\linewidth]{images/04_LogicAnalyzer02.png}
+	\vspace{4pt}
+	\includegraphics[width=\linewidth]{images/04_LogicAnalyzer01.png}
+	\caption{Logic analyzer measurements of the GPIO toggling task (Top view, without using a delay, bottom view with delay).}
+	\label{fig:lab4-logic-analyzer}
+\end{figure}
+
+
+
 \subsection{Task 1: Airbag System}
+In the first iteration the airbag thread only printed random numbers, this ended up being so simple that the execution time didn't show up in the traces, so the full algorithm from exercise 1 was ported over with increased array lengths to accumulate a more realistic processing time. Using the system profiling provided by the VS Code. 	
+For The Rpi4 the following execution \ref{fig:profiling-pi-task1} times were measured, with sliding windows of 6000 and 8000 samples. The trace kept failing on short periods, so in the example the period was set to 1s, since it was the execution time that mattered. 
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{04_Profiling_T1_Pi.png}
+    \caption{Profiling view showing the execution times of thread one. Each thread iteration took about 0.25ms to execute.}
+    \label{fig:profiling-pi-task1}
+\end{figure}
 
-\subsection{Task 2: CRC16 Checksumm}
-For encrytion tiny-AES \footnote{\url{https://github.com/kokke/tiny-AES-c/blob/master/aes.c}}was used.
+After some spontaneous, seemingly unrelated failure of my hardware, I switched to using a Virtual QNX target running in QEMU. Here the trace was successful even with shorter periods  and produced the following profile \ref{fig:profiling-vm-task1} for the same task. 
 
-\subsection{Task 3:Diagnistics}
+\begin{figure}
+	\centering
+	\includegraphics[width=0.9\textwidth]{04_Profiling_T1_VM.png}
+	\caption{Profiling view showing the execution times of thread one on the virtual target. Here each iteration takes about 0.05ms due to more powerful host hardware.}
+	\label{fig:profiling-vm-task1}
+\end{figure}
+
+\subsection{Task 2: CRC16 Checksum}
+For encryption tiny-AES \footnote{\url{https://github.com/kokke/tiny-AES-c/blob/master/aes.c}}was used.
+
+\subsection{Task 3: Diagnostic Task}
 \section{Results}
