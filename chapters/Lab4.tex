@@ -1,9 +1,9 @@
 \chapter{Assignment 4 --- Real-time Application with QNX, Profiling}
 
 \section{Assignment}
-After covering RTOS and their components in detail in the lecture and learning how to schedule periodic tasks on QNX, this assignment focuses on getting started developing for QNX on the Raspberry Pi 4.
+After covering RTOSs and their components in detail in the lecture and learning how to schedule periodic tasks on QNX, this assignment focuses on getting started developing for QNX on the Raspberry Pi 4.
 After getting familiar with the hardware setup and remote debugging, the goal is to create 2 periodic tasks using the POSIX API and monitor their execution using the system profiler and an external logic analyzer.
-code for this implementation as well as those of the following tasks can be found in the GitHub repository for this course \footnote{\url{https://github.com/feldbacherSimone/Assignment_04}}.
+Code for this implementation as well as those of the following tasks can be found in the GitHub repository for this course \footnote{\url{https://github.com/feldbacherSimone/Assignment_04}}.
 
 \section{Approach}
 Since the assignment is focused on working with threads rather than the precise code inside of them, simplified or dummy algorithms were used for some of the tasks. 
@@ -60,27 +60,116 @@ During the lecture a simple task was set up to toggle one of the GPIO pins on th
 
 
 \subsection{Task 1: Airbag System}
-In the first iteration the airbag thread only printed random numbers, this ended up being so simple that the execution time didn't show up in the traces, so the full algorithm from exercise 1 was ported over with increased array lengths to accumulate a more realistic processing time. Using the system profiling provided by the VS Code. 	
-For The Rpi4 the following execution \ref{fig:profiling-pi-task1} times were measured, with sliding windows of 6000 and 8000 samples. The trace kept failing on short periods, so in the example the period was set to 1s, since it was the execution time that mattered. 
+In the first iteration the airbag thread only printed random numbers, which ended up being so simple that the execution time did not show up in the traces. Therefore, the full algorithm from exercise 1 was ported over with increased array lengths to accumulate a more realistic processing time, using the system profiler provided by VS Code.
+For the RPi4, the execution times shown in Figure~\ref{fig:profiling-pi-task1} were measured with sliding windows of 6000 and 8000 samples. The trace kept failing on short periods, so in the example the period was set to 1s, since it was the execution time that mattered.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{04_Profiling_T1_Pi.png}
+    \includegraphics[width=0.9\textwidth]{images/04_Profiling_T1_Pi.png}
     \caption{Profiling view showing the execution times of thread one. Each thread iteration took about 0.25ms to execute.}
     \label{fig:profiling-pi-task1}
 \end{figure}
 
-After some spontaneous, seemingly unrelated failure of my hardware, I switched to using a Virtual QNX target running in QEMU. Here the trace was successful even with shorter periods  and produced the following profile \ref{fig:profiling-vm-task1} for the same task. 
+After some spontaneous, seemingly unrelated failure of my hardware, I switched to using a virtual QNX target running in QEMU. Here the trace was successful even with shorter periods and produced the profile shown in Figure~\ref{fig:profiling-vm-task1} for the same task.
 
-\begin{figure}
+\begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.9\textwidth]{04_Profiling_T1_VM.png}
-	\caption{Profiling view showing the execution times of thread one on the virtual target. Here each iteration takes about 0.05ms due to more powerful host hardware.}
+	\includegraphics[width=0.9\textwidth]{images/04_Profiling_T1_VM.png}
+	\caption{Profiling view showing the execution times of thread one on the virtual target. Here each iteration takes about 0.15ms due to more powerful host hardware.}
 	\label{fig:profiling-vm-task1}
 \end{figure}
 
-\subsection{Task 2: CRC16 Checksum}
-For encryption tiny-AES \footnote{\url{https://github.com/kokke/tiny-AES-c/blob/master/aes.c}}was used.
+\subsection{Task 2: CRC16 Checksum} 
+For the checksum task, a CRC16-CCITT implementation was written to compute a checksum over a simulated 1MB flash segment, represented as a static array filled with a dummy byte pattern \texttt{0xA5}. The polynomial \texttt{0x1021} with an initial value of \texttt{0xFFFF} was used. The resulting 2-byte checksum is then encrypted using AES-128 in CTR mode via the tiny-AES library before being sent over the serial line. The task runs periodically every 500ms using \texttt{clock\_nanosleep()}.
+The execution time of the checksum task was measured using the system profiler, 
+as shown in Figure~\ref{fig:profiling-t2}. The dominant cost is the CRC16 
+computation over the 1MB flash segment, with a WCET of approximately 60ms and a worst case response 
+time of 70ms, well within the 500ms period.
 
 \subsection{Task 3: Diagnostic Task}
+The diagnostic task receives and decrypts incoming commands using AES-128 CTR 
+mode, builds a dummy status message, encrypts it, and sends it back over the 
+serial line. Both receive and send are implemented as dummy functions as per the 
+assignment specification. The task runs periodically every 100ms using 
+\texttt{clock\_nanosleep()}. As shown in Figure~\ref{fig:profiling-t3}, each 
+iteration takes approximately 0.04ms to execute, and the response time is about 0.2ms.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/04_Profiling_T2.png}
+    \caption{Profiling view showing the execution times of the checksum task (Thread 2). Each iteration took approximately 70ms.}
+    \label{fig:profiling-t2}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/04_Profiling_T3.png}
+    \caption{Profiling view showing the execution times of the diagnostic task (Thread 3). Each iteration took approximately 0.04ms.}
+    \label{fig:profiling-t3}
+\end{figure}
 \section{Results}
+Running all three, now accordingly named threads at once, yields the profiling result shown in Figure~\ref{fig:profiling-all}. The view also shows that the threads get interrupted frequently, either by each other or by other processes on the system. This appears in the dark green sections of the timeline, where a thread is ready but not running, and the light green sections where the thread is running. Especially tasks with a long execution time, like the checksum task, are preempted quite often.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/04_Diagnostics_all.png}
+    \caption{Profiling view showing the execution times of all three threads.}
+    \label{fig:profiling-all}
+\end{figure}
+
+Observing the traces from the QEMU VM, the longest response times for each of the threads are:
+
+\begin{itemize}
+	\item Airbag Thread: 0.2ms
+	\item Checksum Thread: 80ms
+	\item Diagnostic Thread: 0.30ms
+\end{itemize}
+
+
+The scheduling simulation in Cheddar for the same task set is shown in Figure~\ref{fig:cheddar-simulation-rm}, using a Rate Monotonic scheduling policy. It confirms that the configured capacities and periods are schedulable on one processor and illustrates the expected preemptions and context switches over the simulated interval. The second image shows the same simulation but with wrong priorities, which lead to missed deadlines for the airbag task, which is the most critical one.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/04_Cheddar.png}
+        \caption{Cheddar scheduling simulation (Rate Monotonic) with correct priorities.}
+        \label{fig:cheddar-simulation-rm}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/04_Cheddar_Wrong.png}
+        \caption{Cheddar scheduling simulation with wrong priorities.}
+        \label{fig:cheddar-simulation-hpf}
+    \end{minipage}
+\end{figure}
+
+\subsection{Shared Resources and Priority Inversion}
+The only shared resource in the system is the serial line, accessed by both the 
+checksum task (Task 2) and the diagnostic task (Task 3). Access is protected 
+using a \texttt{pthread\_mutex}. A bounded priority inversion can occur when 
+Task 2 holds the mutex and is preempted by Task 3, which then blocks waiting 
+for the mutex to be released. Since Task 2 holds the mutex only briefly, the 
+inversion duration is negligible. The AES key and IV are read-only constants 
+and require no protection.
+
+A deadlock is impossible in this system as there is only one shared mutex. 
+Deadlock requires a circular wait between at least two resources, which cannot 
+form with a single mutex.
+
+\subsection{Alternative Resource Protection Methods}
+Alternative methods for protecting shared resources include:
+\begin{itemize}
+    \item \textbf{Priority ceiling protocol} -- raises the priority of the mutex 
+    holder to the ceiling priority, preventing priority inversion entirely.
+    \item \textbf{Spinlocks} -- busy-wait instead of blocking. Wastes CPU cycles 
+    and is unsuitable for an RTOS where other tasks need the processor.
+    \item \textbf{Disabling interrupts} -- prevents all preemption while the 
+    resource is held. Too aggressive for an RTOS as it blocks all other tasks 
+    including higher priority ones.
+    \item \textbf{Lock-free data structures} -- avoid locking entirely using 
+    atomic operations. Complex to implement correctly and overkill for a simple 
+    2-byte serial write.
+\end{itemize}
+A plain mutex was chosen as it is simple, well understood, and sufficient given 
+the short duration the resource is held and the large timing margins available.
